@@ -1,0 +1,10 @@
+name: flashcard
+assets:
+  - "assets/*.*"
+functions:
+  showCards:
+    path: flashcard.ts:showCards
+  showDecks:
+    path: flashcard.ts:showDecks
+    command:
+      name: "Flashcards"
