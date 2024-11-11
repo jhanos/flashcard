@@ -4,6 +4,12 @@
 
 This repository is inspired by [st3v3nmw/obsidian-spaced-repetition](https://github.com/st3v3nmw/obsidian-spaced-repetition)
 
+## Screenshot
+
+![run](https://github.com/jhanos/flashcard/blob/0bd50d2049f787d4758258856145e4af4ac09ca5/flashcard_run.png)
+![decks](https://github.com/jhanos/flashcard/blob/0bd50d2049f787d4758258856145e4af4ac09ca5/flashcard_deck.png)
+![card](https://github.com/jhanos/flashcard/blob/0bd50d2049f787d4758258856145e4af4ac09ca5/flashcard_card.png)
+
 ## Features
 
 Create flashcards from your notes.
