@@ -22,7 +22,7 @@ Work in Progress:
 If you would like to install this plug straight from Github, make sure you have the `.js` file committed to the repo and simply add
 
 ```
-- github:jhanos/flahscard/flashcard.plug.js
+- github:jhanos/flashcard/flashcard.plug.js
 ```
 
 to your `PLUGS` file, run `Plugs: Update` command and off you go!
@@ -58,8 +58,6 @@ get to the heart of the matter
 some new random text
 
 enfant:: child
-
-```
 
 some random text
 ```
