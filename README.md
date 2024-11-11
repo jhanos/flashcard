@@ -17,7 +17,7 @@ Create flashcards from your notes.
 Currently this plugin is statless so it doesn't define priority in card. (Plan in the future)
 
 Working:
-- Single-line reversed style (Question:::Answer)
+- Single-line style (Question::Answer)
 - Multi-line style (Separated by ?)
 
 Work in Progress:
@@ -37,7 +37,7 @@ to your `PLUGS` file, run `Plugs: Update` command and off you go!
 
 1. Add the tag flashcards ( #flashcards in your note or in the frontmatter)
 2. Create multiple notes using:
-  - Single-line reversed style (Question:::Answer)
+  - Single-line style (Question::Answer)
   - Multi-line style (Separated by ?)
 3. Launch "Flashcards" command from "run command" or ctrl + shift + /
 
