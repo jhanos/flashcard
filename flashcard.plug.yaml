@@ -2,6 +2,14 @@ name: flashcard
 assets:
   - "assets/*.*"
 functions:
+  testCard:
+    path: flashcard.ts:testFlashcards
+    command:
+      name: "FlashcardsTest"
+  updateDeck:
+    path: flashcard.ts:updateDeck
+  createDeck:
+    path: flashcard.ts:createDeck
   showCards:
     path: flashcard.ts:showCards
   showDecks:
