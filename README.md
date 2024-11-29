@@ -18,6 +18,11 @@ Work in Progress:
 - Decks hierarchy
 - Cloze cards (==highlight== your cloze deletions!, **bolded text**, {{text in curly braces}}, or use custom cloze patterns)
 
+## Screenshots
+
+![flashcard1](https://raw.githubusercontent.com/jhanos/silverbullet-flashcard/refs/heads/main/flashcards1.webp)
+![flashcard1](https://raw.githubusercontent.com/jhanos/silverbullet-flashcard/refs/heads/main/flashcards2.webp)
+
 ## Installation
 
 ```
