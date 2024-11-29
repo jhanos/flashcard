@@ -4,7 +4,6 @@ import { createEmptyCard, fsrs, Rating} from 'ts-fsrs';
 
 export function parse(text) {
 
-  const start = new Date()
   const array1 = [...text.matchAll(/(.*)::(.*)/g)];
 
   var regex = new RegExp('^(.+)\\n\\?\\n((?:(?:\\n|.+).+)+)', 'gm');
@@ -17,11 +16,17 @@ export function parse(text) {
     var idBase64 = btoa(array[j][1] + array[j][2]);
     data[idBase64] = {}
     data[idBase64]['front'] = array[j][1];
-    data[idBase64]['back'] = array[j][2];
+    data[idBase64]['back'] = array[j][2].replace(/\r?\n|\r|\n/g, '\<br\>');
   }
 
-  console.log('time parse: ' + ((new Date()).getTime() - start.getTime()))
+  //const start = new Date()
+  //console.log('time parse: ' + ((new Date()).getTime() - start.getTime()))
   return data;
+}
+
+export async function deleteDeck(page) {
+    console.log("delete deck " + page)
+    await datastore.del("p_flashcards_" + page );
 }
 
 export async function createDeck(page) {
@@ -39,7 +44,7 @@ export async function createDeck(page) {
     deck['cards'] = {};
     deck.lastModified = now.getTime();
     qa_keys.forEach((k) => {        
-          let scheduling = createEmptyCard();        
+          let scheduling = createEmptyCard(new Date());        
           deck['cards'][k] = {};
           deck['cards'][k]['front'] = QA[k]['front'] 
           deck['cards'][k]['back'] = QA[k]['back']   
@@ -57,7 +62,7 @@ export async function createDeck(page) {
       qa_keys.forEach((k) => {
         if(!deck_keys.includes(k)){
           //console.log('create ' + e)
-          let scheduling = createEmptyCard();
+          let scheduling = createEmptyCard(new Date());
           deck['cards'][k] = {};
           deck['cards'][k]['front'] = QA[k]['front']
           deck['cards'][k]['back'] = QA[k]['back']
@@ -74,14 +79,22 @@ export async function createDeck(page) {
     }
   }
   return deck
-  //let cardUpdated = f.next(card, now, Rating.Easy);
 
 }
 
-export async function updateDeck(page, card) {
+export async function updateDeck(page, deck, cardId, rating) {
 
-    var text = await space.readPage(page);
+  const f = fsrs();
+  if (rating == "again") { var cardUpdated = f.next(deck['cards'][cardId]['scheduling'], new Date(), Rating.Again);};
+  if (rating == "easy") { var cardUpdated = f.next(deck['cards'][cardId]['scheduling'], new Date(), Rating.Easy);};
+  if (rating == "good") { var cardUpdated = f.next(deck['cards'][cardId]['scheduling'], new Date(), Rating.Good);};
+  if (rating == "hard") { var cardUpdated = f.next(deck['cards'][cardId]['scheduling'], new Date(), Rating.Hard);};
+  //console.log(deck['cards'][cardId]['scheduling']);
+  //console.log(cardUpdated['card']);
+  deck['cards'][cardId]['scheduling'] = cardUpdated['card'];
 
+  await datastore.set("p_flashcards_" + page, deck)
+  return deck;
 }
 
 export async function generateDecks() {
@@ -122,7 +135,12 @@ export async function showDecks() {
     var cardsCount = Object.keys(decks[page]['cards']).length
     var dueCards = generateDueCards(page, decks);
     var dueCardsCount = (Object.keys(dueCards)).length;
-    decksHtml += '<button type="button" onclick="syscall(\'system.invokeFunction\',\'flashcard.showCards\',\'' + page + '\');">' + page + '</button> (due: ' + dueCardsCount + ', total: ' + cardsCount + 'cards)<br><br>';
+    if(dueCardsCount > 0) {
+      decksHtml += '<div style="display: inline-block; background-color: rgb(242, 247, 255); border-radius: 5px; padding: 10px; margin: 20px;" onclick="syscall(\'system.invokeFunction\',\'flashcard.showCards\',\'' + page + '\');"><span style="color: #0330cb">' + page + '</span>  [ <span style="color: green">' + dueCardsCount + '</span> ]     </div><button title="Reset cards" onclick="if(window.confirm(\'Delete cards history for ' + page +'\')){syscall(\'system.invokeFunction\',\'flashcard.deleteDeck\',\'' + page + '\');syscall(\'system.invokeFunction\',\'flashcard.showDecks\')}">&#x2715;</button><br>';
+    } else {
+      decksHtml += '<div style="display: inline-block; background-color: rgb(242, 247, 255); border-radius: 5px; padding: 10px; margin: 20px;"><span style="color: #0330cb">' + page + '</span>  [ <span style="color: green">' + dueCardsCount + '</span> ]     </div><button title="Reset cards" onclick="if(window.confirm(\'Delete cards history for ' + page +'\')){syscall(\'system.invokeFunction\',\'flashcard.deleteDeck\',\'' + page + '\');syscall(\'system.invokeFunction\',\'flashcard.showDecks\')}">&#x2715;</button><br>';
+    }
+
   }
   
   console.log('time showDecks: ' + ((new Date()).getTime() - start.getTime()))
@@ -145,12 +163,15 @@ export async function testFlashcards() {
   console.log('start testFlashcards()');
   //const params = generatorParameters({ enable_fuzz: true, enable_short_term: false });
   
-  var decks = await generateDecks();
-  console.log(decks)
+  //var decks = await generateDecks();
+  //console.log(decks)
 
-  //const f = fsrs();
-  //const now = new Date();
-  //let card = createEmptyCard();
-  //let cardUpdated = f.next(card, now, Rating.Easy);
+  const f = fsrs();
+  let card = createEmptyCard();
+  console.log(card)
+  let card1 = f.next(card, new Date(), Rating.Easy);
+  console.log(card1)
+  let card2 = f.next(card1, new Date(), Rating.Easy);
+  console.log(card2)
 
 }

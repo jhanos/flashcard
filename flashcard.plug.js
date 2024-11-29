@@ -1054,7 +1054,6 @@ var W = (r) => new O(r || {});
 
 // ../data/flashcard.ts
 function parse(text) {
-  const start = /* @__PURE__ */ new Date();
   const array1 = [...text.matchAll(/(.*)::(.*)/g)];
   var regex = new RegExp("^(.+)\\n\\?\\n((?:(?:\\n|.+).+)+)", "gm");
   const array2 = [...text.matchAll(regex)];
@@ -1064,10 +1063,13 @@ function parse(text) {
     var idBase64 = btoa(array[j2][1] + array[j2][2]);
     data[idBase64] = {};
     data[idBase64]["front"] = array[j2][1];
-    data[idBase64]["back"] = array[j2][2];
+    data[idBase64]["back"] = array[j2][2].replace(/\r?\n|\r|\n/g, "<br>");
   }
-  console.log("time parse: " + ((/* @__PURE__ */ new Date()).getTime() - start.getTime()));
   return data;
+}
+async function deleteDeck(page) {
+  console.log("delete deck " + page);
+  await datastore_exports.del("p_flashcards_" + page);
 }
 async function createDeck(page) {
   var text = await space_exports.readPage(page);
@@ -1081,7 +1083,7 @@ async function createDeck(page) {
     deck["cards"] = {};
     deck.lastModified = now.getTime();
     qa_keys.forEach((k2) => {
-      let scheduling = w();
+      let scheduling = w(/* @__PURE__ */ new Date());
       deck["cards"][k2] = {};
       deck["cards"][k2]["front"] = QA[k2]["front"];
       deck["cards"][k2]["back"] = QA[k2]["back"];
@@ -1096,7 +1098,7 @@ async function createDeck(page) {
       var deck_keys = Object.keys(deck["cards"]);
       qa_keys.forEach((k2) => {
         if (!deck_keys.includes(k2)) {
-          let scheduling = w();
+          let scheduling = w(/* @__PURE__ */ new Date());
           deck["cards"][k2] = {};
           deck["cards"][k2]["front"] = QA[k2]["front"];
           deck["cards"][k2]["back"] = QA[k2]["back"];
@@ -1114,8 +1116,27 @@ async function createDeck(page) {
   }
   return deck;
 }
-async function updateDeck(page, card) {
-  var text = await space_exports.readPage(page);
+async function updateDeck(page, deck, cardId, rating) {
+  const f = W();
+  if (rating == "again") {
+    var cardUpdated = f.next(deck["cards"][cardId]["scheduling"], /* @__PURE__ */ new Date(), l.Again);
+  }
+  ;
+  if (rating == "easy") {
+    var cardUpdated = f.next(deck["cards"][cardId]["scheduling"], /* @__PURE__ */ new Date(), l.Easy);
+  }
+  ;
+  if (rating == "good") {
+    var cardUpdated = f.next(deck["cards"][cardId]["scheduling"], /* @__PURE__ */ new Date(), l.Good);
+  }
+  ;
+  if (rating == "hard") {
+    var cardUpdated = f.next(deck["cards"][cardId]["scheduling"], /* @__PURE__ */ new Date(), l.Hard);
+  }
+  ;
+  deck["cards"][cardId]["scheduling"] = cardUpdated["card"];
+  await datastore_exports.set("p_flashcards_" + page, deck);
+  return deck;
 }
 async function generateDecks() {
   const result = await system_exports.invokeFunction("index.queryObjects", "flashcards", "page");
@@ -1151,7 +1172,11 @@ async function showDecks() {
     var cardsCount = Object.keys(decks[page]["cards"]).length;
     var dueCards = generateDueCards(page, decks);
     var dueCardsCount = Object.keys(dueCards).length;
-    decksHtml += `<button type="button" onclick="syscall('system.invokeFunction','flashcard.showCards','` + page + `');">` + page + "</button> (due: " + dueCardsCount + ", total: " + cardsCount + "cards)<br><br>";
+    if (dueCardsCount > 0) {
+      decksHtml += `<div style="display: inline-block; background-color: rgb(242, 247, 255); border-radius: 5px; padding: 10px; margin: 20px;" onclick="syscall('system.invokeFunction','flashcard.showCards','` + page + `');"><span style="color: #0330cb">` + page + '</span>  [ <span style="color: green">' + dueCardsCount + `</span> ]     </div><button title="Reset cards" onclick="if(window.confirm('Delete cards history for ` + page + "')){syscall('system.invokeFunction','flashcard.deleteDeck','" + page + `');syscall('system.invokeFunction','flashcard.showDecks')}">&#x2715;</button><br>`;
+    } else {
+      decksHtml += '<div style="display: inline-block; background-color: rgb(242, 247, 255); border-radius: 5px; padding: 10px; margin: 20px;"><span style="color: #0330cb">' + page + '</span>  [ <span style="color: green">' + dueCardsCount + `</span> ]     </div><button title="Reset cards" onclick="if(window.confirm('Delete cards history for ` + page + "')){syscall('system.invokeFunction','flashcard.deleteDeck','" + page + `');syscall('system.invokeFunction','flashcard.showDecks')}">&#x2715;</button><br>`;
+    }
   }
   console.log("time showDecks: " + ((/* @__PURE__ */ new Date()).getTime() - start.getTime()));
   await editor_exports.showPanel("modal", 50, decksHtml, decksJS);
@@ -1164,52 +1189,44 @@ async function showCards(page) {
   await editor_exports.showPanel("modal", 50, cardHtml, cardJS);
   console.log("end showCards()");
 }
-async function testFlashcards() {
-  console.log("start testFlashcards()");
-  var decks = await generateDecks();
-  console.log(decks);
-}
 
-// 44468fa8058e06d8.js
+// 6ceae7156dd596d0.js
 var functionMapping = {
-  testCard: testFlashcards,
   updateDeck,
   createDeck,
+  deleteDeck,
   showCards,
   showDecks
 };
 var manifest = {
   "name": "flashcard",
   "assets": {
-    "assets/cards.html": {
-      "data": "data:text/html;base64,PGJ1dHRvbiB0eXBlPSJidXR0b24iIG9uY2xpY2s9InN5c2NhbGwoJ2VkaXRvci5oaWRlUGFuZWwnLCAnbW9kYWwnKSIgc3R5bGU9InBvc2l0aW9uOmFic29sdXRlOyB0b3A6MDsgcmlnaHQ6MDsiIHRpdGxlPSJDbG9zZSI+WDwvYnV0dG9uPgo8ZGl2IGlkPSJjb3VudCIgc3R5bGU9InBvc2l0aW9uOmFic29sdXRlOyB0b3A6MDsgbGVmdDowOyI+MS8yPC9kaXY+Cjxicj4KPGRpdiBzdHlsZT0ndGV4dC1hbGlnbjogY2VudGVyOyc+CjxkaXYgaWQ9InF1ZXN0aW9uIiBvbmNsaWNrPSJkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2VwYXJhdG9yJykuc3R5bGUudmlzaWJpbGl0eT0ndmlzaWJsZSc7ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Fuc3dlcicpLnN0eWxlLnZpc2liaWxpdHk9J3Zpc2libGUnIj48L2Rpdj4KPGRpdiBpZD0ic2VwYXJhdG9yIiBzdHlsZT0idmlzaWJpbGl0eTogaGlkZGVuIj48aHI+PC9kaXY+CjxkaXYgaWQ9ImFuc3dlciIgc3R5bGU9InZpc2liaWxpdHk6IGhpZGRlbiI+PC9kaXY+Cgo8YnI+PGJyPgogIDxidXR0b24gdHlwZT0iYnV0dG9uIiBpZD0icHJldmlvdXMiPlByZXZpb3VzPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJuZXh0Ij5OZXh0PC9idXR0b24+CjwvZGl2Pgo=",
-      "mtime": 1732722302960
-    },
-    "assets/decks.html": {
-      "data": "data:text/html;base64,PGRpdj4KICA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgb25jbGljaz0ic3lzY2FsbCgnZWRpdG9yLmhpZGVQYW5lbCcsICdtb2RhbCcpIiBzdHlsZT0icG9zaXRpb246YWJzb2x1dGU7IHRvcDowOyByaWdodDowOyIgdGl0bGU9IkNsb3NlIj5YPC9idXR0b24+Cg==",
-      "mtime": 1732722302962
-    },
     "assets/decks.js": {
       "data": "data:application/javascript;base64,Cg==",
-      "mtime": 1732722302963
+      "mtime": 1732886834796
+    },
+    "assets/decks.html": {
+      "data": "data:text/html;base64,PGRpdj4KICA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgb25jbGljaz0ic3lzY2FsbCgnZWRpdG9yLmhpZGVQYW5lbCcsICdtb2RhbCcpIiBzdHlsZT0icG9zaXRpb246YWJzb2x1dGU7IHRvcDowOyByaWdodDowOyIgdGl0bGU9IkNsb3NlIj4mI3gyNzE1OzwvYnV0dG9uPgo=",
+      "mtime": 1732886834798
+    },
+    "assets/cards.html": {
+      "data": "data:text/html;base64,PGRpdiBpZD0icmlnaHRib3giIHN0eWxlPSJwb3NpdGlvbjphYnNvbHV0ZTsgdG9wOjA7IHJpZ2h0OjA7Ij4KPGJ1dHRvbiB0eXBlPSJidXR0b24iIG9uY2xpY2s9InN5c2NhbGwoJ3N5c3RlbS5pbnZva2VGdW5jdGlvbicsJ2ZsYXNoY2FyZC5zaG93RGVja3MnKSI+JmxhcnI7PC9idXR0b24+CjxidXR0b24gdHlwZT0iYnV0dG9uIiBvbmNsaWNrPSJzeXNjYWxsKCdlZGl0b3IuaGlkZVBhbmVsJywgJ21vZGFsJykiICB0aXRsZT0iQ2xvc2UiPiYjeDI3MTU7PC9idXR0b24+CjwvZGl2Pgo8ZGl2IGlkPSJjb3VudCIgc3R5bGU9InBvc2l0aW9uOmFic29sdXRlOyB0b3A6MDsgbGVmdDowOyI+PC9kaXY+Cgo8YnI+CjxkaXYgc3R5bGU9J3RleHQtYWxpZ246IGNlbnRlcjsnPgo8ZGl2IGlkPSJxdWVzdGlvbiI+PC9kaXY+CjxkaXYgaWQ9InNlcGFyYXRvciIgc3R5bGU9InZpc2liaWxpdHk6IGhpZGRlbiI+PGhyPjwvZGl2Pgo8ZGl2IGlkPSJhbnN3ZXIiIHN0eWxlPSJ2aXNpYmlsaXR5OiBoaWRkZW4iPjwvZGl2PgoKPGJyPjxicj4KPGRpdiBpZD0iZGlzcGxheSIgc3R5bGU9ImRpc3BsYXk6IGZsZXg7IGp1c3RpZnktY29udGVudDogY2VudGVyO3Zpc2liaWxpdHk6IHZpc2libGUiPgogIDxidXR0b24gdHlwZT0iYnV0dG9uIj5EaXNwbGF5IEFuc3dlcjwvYnV0dG9uPgo8L2Rpdj4KCjxkaXYgaWQ9InJhdGUiIHN0eWxlPSJkaXNwbGF5OiBmbGV4OyBqdXN0aWZ5LWNvbnRlbnQ6IGNlbnRlcjt2aXNpYmlsaXR5OiBoaWRkZW4iPgogIDxidXR0b24gdHlwZT0iYnV0dG9uIiBpZD0iYWdhaW4iPkFnYWluPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJoYXJkIj5IYXJkPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJnb29kIj5Hb29kPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJlYXN5Ij5FYXN5PC9idXR0b24+ICAKPC9kaXY+Cg==",
+      "mtime": 1732886834799
     },
     "assets/cards.js": {
-      "data": "data:application/javascript;base64,CnZhciBxdWVzdGlvbmNvdW50ID0gMDsKCmNvbnN0IG5leHQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibmV4dCIpOwpjb25zdCBwcmV2aW91cyA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJwcmV2aW91cyIpCmNvbnN0IGNvdW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImNvdW50Iik7Ci8vY29uc3QgcXVlc3Rpb24gPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicXVlc3Rpb24iKTsKLy9jb25zdCBhbnN3ZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiYW5zd2VyIik7CgoKCgoKZnVuY3Rpb24gZ2VuZXJhdGVEdWVDYXJkcyhkZWNrKSB7CiAgdmFyIGNhcmRzID0gZGVja1snY2FyZHMnXQogIHZhciBjYXJkc19rZXlzID0gT2JqZWN0LmtleXMoY2FyZHMpOwogIHZhciBkdWVDYXJkcyA9IHt9CiAgY29uc3Qgbm93ID0gKG5ldyBEYXRlKCkpLmdldFRpbWUoKQogIGNhcmRzX2tleXMuZm9yRWFjaCgoaykgPT4gewogICAgdmFyIGNhcmREdWVEYXRlID0gbmV3IERhdGUoY2FyZHNba11bJ3NjaGVkdWxpbmcnXVsnZHVlJ10pCiAgICBpZiggY2FyZER1ZURhdGUuZ2V0VGltZSgpIDwgbm93ICl7CiAgICAgIGR1ZUNhcmRzW2tdID0gY2FyZHNba107CiAgICB9CiAgfSk7CiAgcmV0dXJuIGR1ZUNhcmRzCn0KCgoKCgpjb25zdCBkZWNrID0gc3lzY2FsbCgic3lzdGVtLmludm9rZUZ1bmN0aW9uIiwgImZsYXNoY2FyZC5jcmVhdGVEZWNrIiwgcGFnZSk7CmRlY2sudGhlbigoZCkgID0+IHsKICB2YXIgZHVlQ2FyZHMgPSBnZW5lcmF0ZUR1ZUNhcmRzKGQpCiAgdmFyIGR1ZUNhcmRzX2tleXMgPSBPYmplY3Qua2V5cyhkdWVDYXJkcyk7CgogIGNvdW50LnRleHRDb250ZW50ID0gKHF1ZXN0aW9uY291bnQgKyAxICkgKyAiLyIgKyBkdWVDYXJkc19rZXlzLmxlbmd0aDsKCiAgcXVlc3Rpb24udGV4dENvbnRlbnQgPSBkdWVDYXJkc1tkdWVDYXJkc19rZXlzW3F1ZXN0aW9uY291bnRdXVsnZnJvbnQnXTsKICBhbnN3ZXIudGV4dENvbnRlbnQgPSBkdWVDYXJkc1tkdWVDYXJkc19rZXlzW3F1ZXN0aW9uY291bnRdXVsnYmFjayddOwoKZnVuY3Rpb24gdXBkYXRlQ2FyZHMoYWN0aW9uKSB7CiAgaWYoYWN0aW9uID09ICJwcmV2aW91cyIgKSB7cXVlc3Rpb25jb3VudCAtPTE7fTsKICBpZihhY3Rpb24gPT0gIm5leHQiICkge3F1ZXN0aW9uY291bnQgKz0xO307CiAgICAKICBpZihxdWVzdGlvbmNvdW50ID49IDAgJiYgcXVlc3Rpb25jb3VudCA8IGR1ZUNhcmRzX2tleXMubGVuZ3RoKSB7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Fuc3dlcicpLnN0eWxlLnZpc2liaWxpdHk9J2hpZGRlbic7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3NlcGFyYXRvcicpLnN0eWxlLnZpc2liaWxpdHk9J2hpZGRlbic7CiAgCiAgY291bnQudGV4dENvbnRlbnQgPSAocXVlc3Rpb25jb3VudCArIDEgKSArICIvIiArIGR1ZUNhcmRzX2tleXMubGVuZ3RoOwogIHF1ZXN0aW9uLnRleHRDb250ZW50ID0gZHVlQ2FyZHNbZHVlQ2FyZHNfa2V5c1txdWVzdGlvbmNvdW50XV1bJ2Zyb250J107CiAgYW5zd2VyLnRleHRDb250ZW50ID0gZHVlQ2FyZHNbZHVlQ2FyZHNfa2V5c1txdWVzdGlvbmNvdW50XV1bJ2JhY2snXTsKICB9CiAgCiAgaWYocXVlc3Rpb25jb3VudCA8IDApIHtxdWVzdGlvbmNvdW50ID0gMH07CiAgaWYocXVlc3Rpb25jb3VudCA+PSBkdWVDYXJkc19rZXlzLmxlbmd0aCkge3F1ZXN0aW9uY291bnQgPSBkdWVDYXJkc19rZXlzLmxlbmd0aCAtIDF9Owp9CgpuZXh0LmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyB1cGRhdGVDYXJkcygnbmV4dCcpIH0pOwpwcmV2aW91cy5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsICgpID0+IHsgdXBkYXRlQ2FyZHMoJ3ByZXZpb3VzJykgfSk7Cgp9KTsKCgo=",
-      "mtime": 1732722302964
+      "data": "data:application/javascript;base64,CnZhciBxdWVzdGlvbmNvdW50ID0gMDsKCgpjb25zdCBhZ2FpbiA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJhZ2FpbiIpOwpjb25zdCBoYXJkID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImhhcmQiKTsKY29uc3QgZ29vZCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJnb29kIik7CmNvbnN0IGVhc3kgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiZWFzeSIpOwoKY29uc3QgY291bnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiY291bnQiKTsKY29uc3QgcXVlc3Rpb24gPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicXVlc3Rpb24iKTsKY29uc3QgYW5zd2VyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImFuc3dlciIpOwoKCgoKCmZ1bmN0aW9uIGdlbmVyYXRlRHVlQ2FyZHMoZGVjaykgewogIHZhciBjYXJkc19rZXlzID0gT2JqZWN0LmtleXMoZGVja1snY2FyZHMnXSk7CiAgdmFyIGR1ZUNhcmRzID0ge30KICBjb25zdCBub3cgPSAobmV3IERhdGUoKSkuZ2V0VGltZSgpCiAgY2FyZHNfa2V5cy5mb3JFYWNoKChrKSA9PiB7CiAgICB2YXIgY2FyZER1ZURhdGUgPSBuZXcgRGF0ZShkZWNrWydjYXJkcyddW2tdWydzY2hlZHVsaW5nJ11bJ2R1ZSddKTsKICAgIGlmKCBjYXJkRHVlRGF0ZS5nZXRUaW1lKCkgPCBub3cgKXsKICAgICAgZHVlQ2FyZHNba10gPSBkZWNrWydjYXJkcyddW2tdOwogICAgfQogIH0pOwogIHJldHVybiBkdWVDYXJkczsKfQoKCgoKCnZhciBkZWNrID0gc3lzY2FsbCgic3lzdGVtLmludm9rZUZ1bmN0aW9uIiwgImZsYXNoY2FyZC5jcmVhdGVEZWNrIiwgcGFnZSk7CmRlY2sudGhlbigoZCkgID0+IHsKICB2YXIgZHVlQ2FyZHMgPSBnZW5lcmF0ZUR1ZUNhcmRzKGQpOwogIHZhciBkdWVDYXJkc19rZXlzID0gT2JqZWN0LmtleXMoZHVlQ2FyZHMpOwoKICBjb3VudC50ZXh0Q29udGVudCA9IGR1ZUNhcmRzX2tleXMubGVuZ3RoOwoKICBxdWVzdGlvbi50ZXh0Q29udGVudCA9IGR1ZUNhcmRzW2R1ZUNhcmRzX2tleXNbcXVlc3Rpb25jb3VudF1dWydmcm9udCddOwogIGFuc3dlci5pbm5lckhUTUwgPSBkdWVDYXJkc1tkdWVDYXJkc19rZXlzW3F1ZXN0aW9uY291bnRdXVsnYmFjayddOwoKICBmdW5jdGlvbiBjaGFuZ2VDYXJkcyhhY3Rpb24pIHsKICAgIGlmKGFjdGlvbiA9PSAicHJldmlvdXMiICkge3F1ZXN0aW9uY291bnQgLT0xO307CiAgICBpZihhY3Rpb24gPT0gIm5leHQiICkge3F1ZXN0aW9uY291bnQgKz0xO307CiAgICAgIAogICAgaWYocXVlc3Rpb25jb3VudCA+PSAwICYmIHF1ZXN0aW9uY291bnQgPCBkdWVDYXJkc19rZXlzLmxlbmd0aCkgewogICAgaGlkZSgpOwogICAgCiAgICBjb3VudC50ZXh0Q29udGVudCA9ICAoT2JqZWN0LmtleXMoZHVlQ2FyZHMpKS5sZW5ndGg7CiAgICBxdWVzdGlvbi50ZXh0Q29udGVudCA9IGR1ZUNhcmRzW2R1ZUNhcmRzX2tleXNbcXVlc3Rpb25jb3VudF1dWydmcm9udCddOwogICAgYW5zd2VyLmlubmVySFRNTCA9IGR1ZUNhcmRzW2R1ZUNhcmRzX2tleXNbcXVlc3Rpb25jb3VudF1dWydiYWNrJ107CiAgICB9CiAgICAKICAgIGlmKHF1ZXN0aW9uY291bnQgPCAwKSB7cXVlc3Rpb25jb3VudCA9IDB9OwogICAgaWYocXVlc3Rpb25jb3VudCA+PSBkdWVDYXJkc19rZXlzLmxlbmd0aCkge3F1ZXN0aW9uY291bnQgPSBkdWVDYXJkc19rZXlzLmxlbmd0aCAtIDF9OwogIH0KCi8vcHJldmlvdXMuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLCAoKSA9PiB7IGNoYW5nZUNhcmRzKCdwcmV2aW91cycpIH0pOwoKICBmdW5jdGlvbiB1cGRhdGVDYXJkKHJhdGluZykgewogICAgdmFyIGRlY2tVcGRhdGVkID0gc3lzY2FsbCgic3lzdGVtLmludm9rZUZ1bmN0aW9uIiwgImZsYXNoY2FyZC51cGRhdGVEZWNrIiwgcGFnZSwgZCwgZHVlQ2FyZHNfa2V5c1txdWVzdGlvbmNvdW50XSwgcmF0aW5nKTsKICAgIGRlY2tVcGRhdGVkLnRoZW4oKGR1KSAgPT4gewogICAgICAvL2NvbnNvbGUubG9nKGR1KTsKICAgICAgZCA9IGR1OwogICAgICBkdWVDYXJkcyA9IGdlbmVyYXRlRHVlQ2FyZHMoZHUpOwogICAgICBjaGFuZ2VDYXJkcygnbmV4dCcpOwogICAgfSk7CiAgfQoKZnVuY3Rpb24gc2hvdygpIHsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2VwYXJhdG9yJykuc3R5bGUudmlzaWJpbGl0eT0ndmlzaWJsZSc7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Fuc3dlcicpLnN0eWxlLnZpc2liaWxpdHk9J3Zpc2libGUnOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyYXRlJykuc3R5bGUudmlzaWJpbGl0eT0ndmlzaWJsZSc7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Rpc3BsYXknKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwp9CgpmdW5jdGlvbiBoaWRlKCkgewogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzZXBhcmF0b3InKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdhbnN3ZXInKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyYXRlJykuc3R5bGUudmlzaWJpbGl0eT0naGlkZGVuJzsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZGlzcGxheScpLnN0eWxlLnZpc2liaWxpdHk9J3Zpc2libGUnOwp9CgpxdWVzdGlvbi5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsICgpID0+IHsgc2hvdygpIH0pOwpkaXNwbGF5LmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyBzaG93KCkgfSk7CmFnYWluLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyB1cGRhdGVDYXJkKCdhZ2FpbicpIH0pOwpoYXJkLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyB1cGRhdGVDYXJkKCdoYXJkJykgfSk7Cmdvb2QuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLCAoKSA9PiB7IHVwZGF0ZUNhcmQoJ2dvb2QnKSB9KTsKZWFzeS5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsICgpID0+IHsgdXBkYXRlQ2FyZCgnZWFzeScpIH0pOwp9KTsKCgo=",
+      "mtime": 1732886834800
     }
   },
   "functions": {
-    "testCard": {
-      "path": "flashcard.ts:testFlashcards",
-      "command": {
-        "name": "FlashcardsTest"
-      }
-    },
     "updateDeck": {
       "path": "flashcard.ts:updateDeck"
     },
     "createDeck": {
       "path": "flashcard.ts:createDeck"
+    },
+    "deleteDeck": {
+      "path": "flashcard.ts:deleteDeck"
     },
     "showCards": {
       "path": "flashcard.ts:showCards"
