@@ -15,8 +15,8 @@ export function parse(text) {
   for(let j = 0;j < array.length; j++) {
     var idBase64 = btoa(array[j][1] + array[j][2]);
     data[idBase64] = {}
-    data[idBase64]['front'] = array[j][1];
-    data[idBase64]['back'] = array[j][2].replace(/\r?\n|\r|\n/g, '\<br\>');
+    data[idBase64]['front'] = array[j][1].replace(/\*(.*?)\*/gm, '<i>$1</i>').replace(/\*\*(.*?)\*\*/gm, '<strong>$1</strong>');
+    data[idBase64]['back'] = array[j][2].replace(/\r?\n|\r|\n/g, '\<br\>').replace(/\*(.*?)\*/gm, '<i>$1</i>').replace(/\*\*(.*?)\*\*/gm, '<strong>$1</strong>');
   }
 
   //const start = new Date()
