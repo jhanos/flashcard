@@ -37,9 +37,9 @@ deck.then((d)  => {
   var dueCards = generateDueCards(d);
   var dueCards_keys = Object.keys(dueCards);
 
-  count.textContent = dueCards_keys.length;
+  count.textContent = page + ' / ' + dueCards_keys.length;
 
-  question.textContent = dueCards[dueCards_keys[questioncount]]['front'];
+  question.innerHTML = dueCards[dueCards_keys[questioncount]]['front'];
   answer.innerHTML = dueCards[dueCards_keys[questioncount]]['back'];
 
   function changeCards(action) {
@@ -49,8 +49,8 @@ deck.then((d)  => {
     if(questioncount >= 0 && questioncount < dueCards_keys.length) {
     hide();
     
-    count.textContent =  (Object.keys(dueCards)).length;
-    question.textContent = dueCards[dueCards_keys[questioncount]]['front'];
+    count.textContent = page + ' / ' + dueCards_keys.length;
+    question.innerHTML = dueCards[dueCards_keys[questioncount]]['front'];
     answer.innerHTML = dueCards[dueCards_keys[questioncount]]['back'];
     }
     
