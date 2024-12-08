@@ -26,15 +26,18 @@ export function parse(text) {
 
 export async function deleteDeck(page) {
     console.log("delete deck " + page)
-    await datastore.del("p_flashcards_" + page );
+    await datastore.del(["p_flashcards_" + page] );
 }
 
 export async function createDeck(page) {
+  console.log('start createDeck()');
 
   var text = await space.readPage(page);
   var QA = parse(text);
   var qa_keys = Object.keys(QA);
-  var deck = await datastore.get("p_flashcards_" + page )
+  console.log('before datastore get createDeck()');
+  var deck = await datastore.get(["p_flashcards_" + page])
+  console.log('after datastore get createDeck()');
   var now = new Date();
   const f = fsrs();
 
@@ -50,7 +53,7 @@ export async function createDeck(page) {
           deck['cards'][k]['back'] = QA[k]['back']   
           deck['cards'][k]['scheduling'] = scheduling
       });
-    await datastore.set("p_flashcards_" + page, deck)
+    await datastore.set(["p_flashcards_" + page], deck)
   } else {
     var info = await space.getPageMeta(page);
     var pageLastModified = new Date(info['lastModified']);
@@ -75,9 +78,10 @@ export async function createDeck(page) {
         }
       });
       deck.lastModified = now.getTime();
-      await datastore.set("p_flashcards_" + page, deck)
+      await datastore.set(["p_flashcards_" + page], deck)
     }
   }
+  console.log('end createDeck()');
   return deck
 
 }
@@ -93,18 +97,19 @@ export async function updateDeck(page, deck, cardId, rating) {
   //console.log(cardUpdated['card']);
   deck['cards'][cardId]['scheduling'] = cardUpdated['card'];
 
-  await datastore.set("p_flashcards_" + page, deck)
+  await datastore.set(["p_flashcards_" + page], deck)
   return deck;
 }
 
 export async function generateDecks() {
-
+  console.log('start generateDecks()');
   const result = await system.invokeFunction("index.queryObjects", "flashcards","page");
   var decksQA = {};
   for(let i = 0;i < result.length; i++) {
     var page = result[i]["name"];
     decksQA[page] = await createDeck(page);
   }
+  console.log('end generateDecks()');
   return decksQA;
 }
 

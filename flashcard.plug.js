@@ -1069,13 +1069,16 @@ function parse(text) {
 }
 async function deleteDeck(page) {
   console.log("delete deck " + page);
-  await datastore_exports.del("p_flashcards_" + page);
+  await datastore_exports.del(["p_flashcards_" + page]);
 }
 async function createDeck(page) {
+  console.log("start createDeck()");
   var text = await space_exports.readPage(page);
   var QA = parse(text);
   var qa_keys = Object.keys(QA);
-  var deck = await datastore_exports.get("p_flashcards_" + page);
+  console.log("before datastore get createDeck()");
+  var deck = await datastore_exports.get(["p_flashcards_" + page]);
+  console.log("after datastore get createDeck()");
   var now = /* @__PURE__ */ new Date();
   const f = W();
   if (deck == void 0) {
@@ -1089,7 +1092,7 @@ async function createDeck(page) {
       deck["cards"][k2]["back"] = QA[k2]["back"];
       deck["cards"][k2]["scheduling"] = scheduling;
     });
-    await datastore_exports.set("p_flashcards_" + page, deck);
+    await datastore_exports.set(["p_flashcards_" + page], deck);
   } else {
     var info = await space_exports.getPageMeta(page);
     var pageLastModified = new Date(info["lastModified"]);
@@ -1111,9 +1114,10 @@ async function createDeck(page) {
         }
       });
       deck.lastModified = now.getTime();
-      await datastore_exports.set("p_flashcards_" + page, deck);
+      await datastore_exports.set(["p_flashcards_" + page], deck);
     }
   }
+  console.log("end createDeck()");
   return deck;
 }
 async function updateDeck(page, deck, cardId, rating) {
@@ -1135,16 +1139,18 @@ async function updateDeck(page, deck, cardId, rating) {
   }
   ;
   deck["cards"][cardId]["scheduling"] = cardUpdated["card"];
-  await datastore_exports.set("p_flashcards_" + page, deck);
+  await datastore_exports.set(["p_flashcards_" + page], deck);
   return deck;
 }
 async function generateDecks() {
+  console.log("start generateDecks()");
   const result = await system_exports.invokeFunction("index.queryObjects", "flashcards", "page");
   var decksQA = {};
   for (let i = 0; i < result.length; i++) {
     var page = result[i]["name"];
     decksQA[page] = await createDeck(page);
   }
+  console.log("end generateDecks()");
   return decksQA;
 }
 function generateDueCards(page, decks) {
@@ -1190,7 +1196,7 @@ async function showCards(page) {
   console.log("end showCards()");
 }
 
-// 9259f83ff099e995.js
+// 3d211c05b1d2680d.js
 var functionMapping = {
   updateDeck,
   createDeck,
@@ -1203,19 +1209,19 @@ var manifest = {
   "assets": {
     "assets/decks.js": {
       "data": "data:application/javascript;base64,Cg==",
-      "mtime": 1733150452252
+      "mtime": 1733692282815
     },
     "assets/decks.html": {
       "data": "data:text/html;base64,PGRpdj4KICA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgb25jbGljaz0ic3lzY2FsbCgnZWRpdG9yLmhpZGVQYW5lbCcsICdtb2RhbCcpIiBzdHlsZT0icG9zaXRpb246YWJzb2x1dGU7IHRvcDowOyByaWdodDowOyIgdGl0bGU9IkNsb3NlIj4mI3gyNzE1OzwvYnV0dG9uPgo=",
-      "mtime": 1733150452253
+      "mtime": 1733692282817
     },
     "assets/cards.html": {
       "data": "data:text/html;base64,PGRpdiBpZD0icmlnaHRib3giIHN0eWxlPSJwb3NpdGlvbjphYnNvbHV0ZTsgdG9wOjA7IHJpZ2h0OjA7Ij4KPGJ1dHRvbiB0eXBlPSJidXR0b24iIG9uY2xpY2s9InN5c2NhbGwoJ3N5c3RlbS5pbnZva2VGdW5jdGlvbicsJ2ZsYXNoY2FyZC5zaG93RGVja3MnKSI+JmxhcnI7PC9idXR0b24+CjxidXR0b24gdHlwZT0iYnV0dG9uIiBvbmNsaWNrPSJzeXNjYWxsKCdlZGl0b3IuaGlkZVBhbmVsJywgJ21vZGFsJykiICB0aXRsZT0iQ2xvc2UiPiYjeDI3MTU7PC9idXR0b24+CjwvZGl2Pgo8ZGl2IGlkPSJjb3VudCIgc3R5bGU9InBvc2l0aW9uOmFic29sdXRlOyB0b3A6MDsgbGVmdDowOyI+PC9kaXY+Cgo8YnI+CjxkaXYgc3R5bGU9J3RleHQtYWxpZ246IGNlbnRlcjsnPgo8ZGl2IGlkPSJxdWVzdGlvbiI+PC9kaXY+CjxkaXYgaWQ9InNlcGFyYXRvciIgc3R5bGU9InZpc2liaWxpdHk6IGhpZGRlbiI+PGhyPjwvZGl2Pgo8ZGl2IGlkPSJhbnN3ZXIiIHN0eWxlPSJ2aXNpYmlsaXR5OiBoaWRkZW4iPjwvZGl2PgoKPGJyPjxicj4KPGRpdiBpZD0iZGlzcGxheSIgc3R5bGU9ImRpc3BsYXk6IGZsZXg7IGp1c3RpZnktY29udGVudDogY2VudGVyO3Zpc2liaWxpdHk6IHZpc2libGUiPgogIDxidXR0b24gdHlwZT0iYnV0dG9uIj5EaXNwbGF5IEFuc3dlcjwvYnV0dG9uPgo8L2Rpdj4KCjxkaXYgaWQ9InJhdGUiIHN0eWxlPSJkaXNwbGF5OiBmbGV4OyBqdXN0aWZ5LWNvbnRlbnQ6IGNlbnRlcjt2aXNpYmlsaXR5OiBoaWRkZW4iPgogIDxidXR0b24gdHlwZT0iYnV0dG9uIiBpZD0iYWdhaW4iPkFnYWluPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJoYXJkIj5IYXJkPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJnb29kIj5Hb29kPC9idXR0b24+CiAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGlkPSJlYXN5Ij5FYXN5PC9idXR0b24+ICAKPC9kaXY+Cg==",
-      "mtime": 1733150452254
+      "mtime": 1733692282818
     },
     "assets/cards.js": {
       "data": "data:application/javascript;base64,CnZhciBxdWVzdGlvbmNvdW50ID0gMDsKCgpjb25zdCBhZ2FpbiA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJhZ2FpbiIpOwpjb25zdCBoYXJkID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImhhcmQiKTsKY29uc3QgZ29vZCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJnb29kIik7CmNvbnN0IGVhc3kgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiZWFzeSIpOwoKY29uc3QgY291bnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgiY291bnQiKTsKY29uc3QgcXVlc3Rpb24gPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicXVlc3Rpb24iKTsKY29uc3QgYW5zd2VyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoImFuc3dlciIpOwoKCgoKCmZ1bmN0aW9uIGdlbmVyYXRlRHVlQ2FyZHMoZGVjaykgewogIHZhciBjYXJkc19rZXlzID0gT2JqZWN0LmtleXMoZGVja1snY2FyZHMnXSk7CiAgdmFyIGR1ZUNhcmRzID0ge30KICBjb25zdCBub3cgPSAobmV3IERhdGUoKSkuZ2V0VGltZSgpCiAgY2FyZHNfa2V5cy5mb3JFYWNoKChrKSA9PiB7CiAgICB2YXIgY2FyZER1ZURhdGUgPSBuZXcgRGF0ZShkZWNrWydjYXJkcyddW2tdWydzY2hlZHVsaW5nJ11bJ2R1ZSddKTsKICAgIGlmKCBjYXJkRHVlRGF0ZS5nZXRUaW1lKCkgPCBub3cgKXsKICAgICAgZHVlQ2FyZHNba10gPSBkZWNrWydjYXJkcyddW2tdOwogICAgfQogIH0pOwogIHJldHVybiBkdWVDYXJkczsKfQoKCgoKCnZhciBkZWNrID0gc3lzY2FsbCgic3lzdGVtLmludm9rZUZ1bmN0aW9uIiwgImZsYXNoY2FyZC5jcmVhdGVEZWNrIiwgcGFnZSk7CmRlY2sudGhlbigoZCkgID0+IHsKICB2YXIgZHVlQ2FyZHMgPSBnZW5lcmF0ZUR1ZUNhcmRzKGQpOwogIHZhciBkdWVDYXJkc19rZXlzID0gT2JqZWN0LmtleXMoZHVlQ2FyZHMpOwoKICBjb3VudC50ZXh0Q29udGVudCA9IHBhZ2UgKyAnIC8gJyArIGR1ZUNhcmRzX2tleXMubGVuZ3RoOwoKICBxdWVzdGlvbi5pbm5lckhUTUwgPSBkdWVDYXJkc1tkdWVDYXJkc19rZXlzW3F1ZXN0aW9uY291bnRdXVsnZnJvbnQnXTsKICBhbnN3ZXIuaW5uZXJIVE1MID0gZHVlQ2FyZHNbZHVlQ2FyZHNfa2V5c1txdWVzdGlvbmNvdW50XV1bJ2JhY2snXTsKCiAgZnVuY3Rpb24gY2hhbmdlQ2FyZHMoYWN0aW9uKSB7CiAgICBpZihhY3Rpb24gPT0gInByZXZpb3VzIiApIHtxdWVzdGlvbmNvdW50IC09MTt9OwogICAgaWYoYWN0aW9uID09ICJuZXh0IiApIHtxdWVzdGlvbmNvdW50ICs9MTt9OwogICAgICAKICAgIGlmKHF1ZXN0aW9uY291bnQgPj0gMCAmJiBxdWVzdGlvbmNvdW50IDwgZHVlQ2FyZHNfa2V5cy5sZW5ndGgpIHsKICAgIGhpZGUoKTsKICAgIAogICAgY291bnQudGV4dENvbnRlbnQgPSBwYWdlICsgJyAvICcgKyBkdWVDYXJkc19rZXlzLmxlbmd0aDsKICAgIHF1ZXN0aW9uLmlubmVySFRNTCA9IGR1ZUNhcmRzW2R1ZUNhcmRzX2tleXNbcXVlc3Rpb25jb3VudF1dWydmcm9udCddOwogICAgYW5zd2VyLmlubmVySFRNTCA9IGR1ZUNhcmRzW2R1ZUNhcmRzX2tleXNbcXVlc3Rpb25jb3VudF1dWydiYWNrJ107CiAgICB9CiAgICAKICAgIGlmKHF1ZXN0aW9uY291bnQgPCAwKSB7cXVlc3Rpb25jb3VudCA9IDB9OwogICAgaWYocXVlc3Rpb25jb3VudCA+PSBkdWVDYXJkc19rZXlzLmxlbmd0aCkge3F1ZXN0aW9uY291bnQgPSBkdWVDYXJkc19rZXlzLmxlbmd0aCAtIDF9OwogIH0KCi8vcHJldmlvdXMuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLCAoKSA9PiB7IGNoYW5nZUNhcmRzKCdwcmV2aW91cycpIH0pOwoKICBmdW5jdGlvbiB1cGRhdGVDYXJkKHJhdGluZykgewogICAgdmFyIGRlY2tVcGRhdGVkID0gc3lzY2FsbCgic3lzdGVtLmludm9rZUZ1bmN0aW9uIiwgImZsYXNoY2FyZC51cGRhdGVEZWNrIiwgcGFnZSwgZCwgZHVlQ2FyZHNfa2V5c1txdWVzdGlvbmNvdW50XSwgcmF0aW5nKTsKICAgIGRlY2tVcGRhdGVkLnRoZW4oKGR1KSAgPT4gewogICAgICAvL2NvbnNvbGUubG9nKGR1KTsKICAgICAgZCA9IGR1OwogICAgICBkdWVDYXJkcyA9IGdlbmVyYXRlRHVlQ2FyZHMoZHUpOwogICAgICBjaGFuZ2VDYXJkcygnbmV4dCcpOwogICAgfSk7CiAgfQoKZnVuY3Rpb24gc2hvdygpIHsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc2VwYXJhdG9yJykuc3R5bGUudmlzaWJpbGl0eT0ndmlzaWJsZSc7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Fuc3dlcicpLnN0eWxlLnZpc2liaWxpdHk9J3Zpc2libGUnOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyYXRlJykuc3R5bGUudmlzaWJpbGl0eT0ndmlzaWJsZSc7CiAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2Rpc3BsYXknKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwp9CgpmdW5jdGlvbiBoaWRlKCkgewogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzZXBhcmF0b3InKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdhbnN3ZXInKS5zdHlsZS52aXNpYmlsaXR5PSdoaWRkZW4nOwogIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyYXRlJykuc3R5bGUudmlzaWJpbGl0eT0naGlkZGVuJzsKICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnZGlzcGxheScpLnN0eWxlLnZpc2liaWxpdHk9J3Zpc2libGUnOwp9CgpxdWVzdGlvbi5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsICgpID0+IHsgc2hvdygpIH0pOwpkaXNwbGF5LmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyBzaG93KCkgfSk7CmFnYWluLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyB1cGRhdGVDYXJkKCdhZ2FpbicpIH0pOwpoYXJkLmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKCkgPT4geyB1cGRhdGVDYXJkKCdoYXJkJykgfSk7Cmdvb2QuYWRkRXZlbnRMaXN0ZW5lcigiY2xpY2siLCAoKSA9PiB7IHVwZGF0ZUNhcmQoJ2dvb2QnKSB9KTsKZWFzeS5hZGRFdmVudExpc3RlbmVyKCJjbGljayIsICgpID0+IHsgdXBkYXRlQ2FyZCgnZWFzeScpIH0pOwp9KTsKCgo=",
-      "mtime": 1733150452256
+      "mtime": 1733692282819
     }
   },
   "functions": {
